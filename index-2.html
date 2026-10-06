@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รู้จักแบงค์แค่ไหน?</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+    background:linear-gradient(135deg,#050505,#111827,#020617); color:#fff;
+    display:flex; justify-content:center; align-items:center; padding:22px;
+  }
+  .card{
+    width:min(700px,100%); background:rgba(15,23,42,.92); border:1px solid #334155;
+    border-radius:28px; padding:28px; box-shadow:0 20px 70px rgba(0,0,0,.55);
+  }
+  h1{font-size:clamp(28px,7vw,46px); margin:0 0 8px; text-align:center}
+  .sub{text-align:center;color:#94a3b8;margin-bottom:25px}
+  .progress{height:9px;background:#1e293b;border-radius:99px;overflow:hidden;margin-bottom:24px}
+  .bar{height:100%;width:0;background:linear-gradient(90deg,#2563eb,#60a5fa);transition:.3s}
+  .qnum{color:#60a5fa;font-weight:800;margin-bottom:8px}
+  h2{font-size:24px;line-height:1.4;margin:0 0 18px}
+  .answers{display:grid;gap:12px}
+  button.answer{
+    width:100%; padding:15px 17px; border-radius:15px; border:1px solid #334155;
+    background:#0f172a;color:#e2e8f0;text-align:left;font-size:16px;cursor:pointer;transition:.18s;
+  }
+  button.answer:hover{border-color:#60a5fa;background:#172554;transform:translateY(-1px)}
+  button.answer.selected{border-color:#60a5fa;background:#1d4ed8}
+  .next,.restart{
+    width:100%; margin-top:20px; padding:15px;border:0;border-radius:15px;
+    background:#2563eb;color:white;font-size:17px;font-weight:800;cursor:pointer;
+  }
+  .next:disabled{opacity:.4;cursor:not-allowed}
+  .result{text-align:center}
+  .score{font-size:64px;font-weight:900;color:#60a5fa;margin:15px 0}
+  .badge{font-size:23px;font-weight:800;margin-bottom:10px}
+  .detail{color:#cbd5e1;line-height:1.7}
+  .small{color:#64748b;font-size:13px;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="card" id="app"></div>
+<script>
+const questions = [
+ {q:"สีที่แบงค์ชอบที่สุดคืออะไร?", a:["น้ำเงิน ดำ ขาว","แดง เหลือง เขียว","ม่วง ชมพู ฟ้า","ส้ม น้ำตาล เทา"], c:0},
+ {q:"งานอดิเรกที่แบงค์ชอบคืออะไร?", a:["เล่นเกม","ถ่ายรูป","วาดรูป","ทำอาหาร"], c:1},
+ {q:"ถ้าให้แบงค์นิยามตัวเอง 3 คำ คำตอบคืออะไร?", a:["ร่าเริง ขี้เล่น เสียงดัง","แก้ปัญหา นิ่ง แว่น","ชอบเที่ยว กิน นอน","เร็ว แรง เฟี้ยว"], c:1},
+ {q:"เวลาอยู่กับธรรมชาติ แบงค์รู้สึกอย่างไร?", a:["เบื่อ","กลัว","สนุก","ง่วง"], c:2},
+ {q:"กีฬาที่แบงค์เล่น/ฝึกเป็นประจำคืออะไร?", a:["ฟุตบอล","บาสเกตบอล","แบดมินตัน","ว่ายน้ำ"], c:2},
+ {q:"เสื้อแบบไหนที่แบงค์ชอบเป็นพิเศษ?", a:["เสื้อรัดรูปสีขาว","เสื้อตัวใหญ่สีดำ","เสื้อแขนกุดสีแดง","เสื้อเชิ้ตสีเหลือง"], c:1},
+ {q:"ถ้าให้เลือกของใช้ แบงค์มักเลือกสีอะไร?", a:["ขาว","ชมพู","ดำ","เขียว"], c:2},
+ {q:"เวลาแฟนไม่อยู่หลายวัน แบงค์มักเป็นอย่างไร?", a:["ไม่สนใจเลย","คิดถึง เป็นห่วง ทักหาและคอยส่อง","ดีใจที่ได้อยู่คนเดียว","ลืมไปเลย"], c:1},
+ {q:"วันเกิดของแบงค์คือวันไหน?", a:["08/02/55","14/02/55","08/08/55","12/02/55"], c:0},
+ {q:"อาหารที่แบงค์ชอบกินคืออะไร?", a:["ซูชิ","ไก่ทอด","ผัดไทย","พิซซ่า"], c:1},
+ {q:"คำถามสุ่ม: ถ้าได้ออกไปถ่ายรูป แบงค์น่าจะเลือกถ่ายอะไรมากที่สุด?", a:["ท้องฟ้าและธรรมชาติ","เอกสารการบ้าน","กำแพงว่าง ๆ","ป้ายราคาสินค้า"], c:0}
+];
+
+let i=0, score=0, chosen=null;
+const app=document.getElementById("app");
+
+function render(){
+  if(i>=questions.length){ return result(); }
+  const x=questions[i];
+  app.innerHTML=`
+    <h1>รู้จักแบงค์แค่ไหน? 😎</h1>
+    <div class="sub">Quiz สำหรับคนที่คิดว่ารู้จักแบงค์ดี</div>
+    <div class="progress"><div class="bar" style="width:${i/questions.length*100}%"></div></div>
+    <div class="qnum">ข้อ ${i+1} / ${questions.length}</div>
+    <h2>${x.q}</h2>
+    <div class="answers">
+      ${x.a.map((v,n)=>`<button class="answer" onclick="choose(${n})">${String.fromCharCode(65+n)}. ${v}</button>`).join("")}
+    </div>
+    <button class="next" id="next" disabled onclick="nextQ()">ข้อต่อไป →</button>
+    <div class="small">ตอบตามที่คิดว่า “แบงค์” จะตอบ</div>`;
+}
+function choose(n){
+  chosen=n;
+  document.querySelectorAll(".answer").forEach((b,k)=>b.classList.toggle("selected",k===n));
+  document.getElementById("next").disabled=false;
+}
+function nextQ(){
+  if(chosen===questions[i].c) score++;
+  i++; chosen=null; render();
+}
+function result(){
+  let title, msg;
+  const pct=score/questions.length;
+  if(pct===1){title="รู้จักแบงค์โคตรดี 🔥";msg="ระดับนี้เหมือนอ่านใจแบงค์ได้แล้ว";}
+  else if(pct>=.8){title="รู้จักแบงค์ดีมาก 💙";msg="เกือบทุกเรื่องตอบได้ แบงค์น่าจะยอมรับแล้ว";}
+  else if(pct>=.6){title="รู้จักแบงค์พอสมควร 😎";msg="ยังมีบางมุมที่ต้องทำความรู้จักกันอีก";}
+  else if(pct>=.4){title="ต้องทำความรู้จักใหม่แล้ว 😂";msg="ข้อมูลแบงค์หลุดไปหลายข้อเลยนะ";}
+  else{title="นี่รู้จักแบงค์จริงไหมเนี่ย 💀";msg="กลับไปทำความรู้จักแบงค์ใหม่ด่วน";}
+  app.innerHTML=`
+    <div class="result">
+      <h1>ผลการทดสอบ 🎉</h1>
+      <div class="score">${score}/${questions.length}</div>
+      <div class="badge">${title}</div>
+      <div class="detail">${msg}<br>คะแนน ${Math.round(pct*100)}%</div>
+      <button class="restart" onclick="i=0;score=0;chosen=null;render()">เล่นใหม่ 🔄</button>
+    </div>`;
+}
+render();
+</script>
+</body>
+</html>
